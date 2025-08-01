@@ -707,8 +707,9 @@ end
 ---p.s. Why is this not a built-in Vim script function?!
 ---
 ---@param last_selected? boolean Whether use the last selected region when current mode is not visual or select
----@return string
-function M.get_visual_selection(last_selected)
+---@param list? boolean Whether return a list of lines or a single string
+---@return string|string[]
+function M.get_visual_selection(last_selected, list)
   local pos1, pos2, mode
 
   if M.is_visual_mode(true) then
@@ -716,14 +717,23 @@ function M.get_visual_selection(last_selected)
   elseif last_selected then
     pos1, pos2, mode = "'<", "'>", fn.visualmode()
   else
-    return fn.expand("<cword>")
+    local word = fn.expand("<cword>")
+    return list and { word } or word
   end
 
   local region, _ipairs = M.region(0, pos1, pos2, mode, vim.o.selection == "inclusive")
 
-  if not _ipairs then return fn.expand("<cword>") end
+  if not _ipairs then
+    local word = fn.expand("<cword>")
+    return list and { word } or word
+  end
 
-  return vim.iter(_ipairs(region)):fold("", function(s, _, r) return s .. "\n" .. r.text end):sub(2)
+  local lines = {}
+  for _, r in _ipairs(region) do
+    table.insert(lines, r.text)
+  end
+
+  return list and lines or table.concat(lines, "\n")
 end
 
 return M
